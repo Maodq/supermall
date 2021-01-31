@@ -92,9 +92,14 @@ export default {
   },
   activated() {
     this.$refs.scroll.scrollTo(0,this.saveY)
+    //下面的refresh代码必须要加，因为又重新初始化了高度，必须重新刷新一下scroll
+    //不然可以返回记忆位置，但是一旦滚动，就会导致回到顶部
+    this.$refs.scroll.scroll.refresh()
+    // console.log("actived");
   },
   deactivated() {
     this.saveY = this.$refs.scroll.scroll.y
+    // console.log("deactived");
   },
   mounted() {
     //解决商品上拉时卡顿hub

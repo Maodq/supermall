@@ -27,7 +27,7 @@ const routes = [
     component:Profile
   },{
     // 采用动态路由的方式，跳转到详情页面时，传递商品的id，也可以采用query
-    path:'/detail/:id',
+    path:'/detail/:iid',
     component:Detail
   }
 ]

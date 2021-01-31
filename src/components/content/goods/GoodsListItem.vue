@@ -1,9 +1,10 @@
 <template>
-  <div class="goods-list-item" @click="goodsItemClick">
-    <img :src="goodsItem.show.img" alt="" @load="itemImageLoad">
+
+  <div class="goods-list-item" @click="goodsItemClick" >
+    <img :src="showImage" alt="" @load="itemImageLoad">
     <div class="goods-info">
       <p>{{goodsItem.title}}</p>
-      <span class="price">{{goodsItem.price}}</span>
+      <span class="price">￥{{goodsItem.price}}</span>
       <span class="collect">{{goodsItem.cfav}}</span>
     </div>
   </div>
@@ -18,7 +19,7 @@ export default {
       default() {
         return {}
       }
-    }
+    },
   },
   methods: {
     // 监听图片加载
@@ -28,6 +29,15 @@ export default {
     // 商品跳转到详情页面,第二个/不要掉了
     goodsItemClick() {
       this.$router.push('./detail/' + this.goodsItem.iid)
+    }
+  },
+  computed:{
+    showImage() {
+      // 为什么下面的两个逻辑或换一下位置就报错？
+      // 是因为this.goodsItem.show.img一运行就会加载所以必定不为空，当点击详情推荐时，永远不会执行到后面的this.goodsItem.image
+      //所以程序会报错，说找不到图片地址
+      return this.goodsItem.image || this.goodsItem.show.img
+      // return this.goodsItem.show.img || this.goodsItem.image 错误代码
     }
   }
 }
