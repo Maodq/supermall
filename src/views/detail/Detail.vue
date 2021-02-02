@@ -1,21 +1,23 @@
 <template>
   <div class="items-detail">
-    <detail-nav-bar class="detail-nav-bar">
+    <detail-nav-bar class="detail-nav-bar" @titleClick="titleClick"  ref="detailNavBar">
     </detail-nav-bar>
 <!--    使用scroll时必须要有固定的高度-->
-    <scroll class="content" ref="scroll">
+    <scroll class="content" ref="scroll" @contentScroll="contentScroll">
       <detail-swiper class="detail-swiper" :top-images="topImages"></detail-swiper>
       <detail-base-info :goods="goods"></detail-base-info>
       <detail-shop-info :shops="shops"></detail-shop-info>
-      <detail-param-info :paramInfo="paramInfo"></detail-param-info>
-      <detail-goods-info :detailInfo="detailInfo" @goodsInfoLoad="goodsInfoLoad"></detail-goods-info>
-      <detail-comment-info :commentInfo="commentInfo"></detail-comment-info>
+      <detail-param-info ref="params" :paramInfo="paramInfo"></detail-param-info>
+      <detail-goods-info  :detailInfo="detailInfo" @goodsInfoLoad="goodsInfoLoad"></detail-goods-info>
+      <detail-comment-info ref="comment" :commentInfo="commentInfo"></detail-comment-info>
 <!--      展示推荐数据的时候，不需要另外再写组件，可以直接使用home页面中写好的goodslist组件-->
       <div class="recommendList">
        <span>推荐列表</span>
       </div>
-      <goods-list :goods="recommendsInfo"></goods-list>
+      <goods-list ref="recommend" :goods="recommendsInfo"></goods-list>
     </scroll>
+    <back-top @click.native="backClick" v-if="isShowBackTop" ></back-top>
+    <detail-bottom-bar @addCart="addToCart"></detail-bottom-bar>
   </div>
 </template>
 
@@ -29,8 +31,11 @@ import DetailParamInfo from "@/views/detail/childComps/DetailParamInfo";
 import DetailCommentInfo from "@/views/detail/childComps/DetailCommentInfo";
 import Scroll from "@/components/common/scroll/Scroll";
 import GoodsList from "@/components/content/goods/GoodsList";
+import DetailBottomBar from "@/views/detail/childComps/DetailBottomBar";
+import BackTop from "@/components/content/backtop/BackTop";
 import {getDetail,getRecommend} from "@/network/detail";
 import {Goods,Shop,GoodsParam} from '@/network/detail'
+import {debunce} from "@/common/utils";
 
 
 export default {
@@ -43,7 +48,11 @@ name: "Detail",
       detailInfo:{},
       paramInfo:{},
       commentInfo:{},
-      recommendsInfo:[]
+      recommendsInfo:[],
+     itemImgListener:null,
+      themTopYs:[],
+      getThemTopY:null,
+      isShowBackTop:false
     }
   },
   components:{
@@ -55,12 +64,71 @@ name: "Detail",
     DetailGoodsInfo,
     DetailParamInfo,
     DetailCommentInfo,
-    GoodsList
+    GoodsList,
+    DetailBottomBar,
+    BackTop
   },
   methods:{
+  //商品详情中的图片信息加载
     goodsInfoLoad(){
       this.$refs.scroll && this.$refs.scroll.scroll.refresh()
+      this.getThemTopY()
+    },
+    //标题点击，切换
+    titleClick(index) {
+      // console.log(index);
+      this.$refs.scroll.scroll.scrollTo(0,-this.themTopYs[index],100)
+      this.$refs.scroll && this.$refs.scroll.scroll.refresh()
+    },
+    //获取当前界面滚动到的位置
+    contentScroll(position){
+      // 当滑动的位置超过1500时，将返回到顶部的按钮显示出来
+      //是否显示回到顶部图标
+      if(Math.abs(position.y) >= 1500) {
+        this.isShowBackTop = true
+        // console.log(this.isShowBackTop);
+      }else{
+        this.isShowBackTop = false
+      }
+      //1.返回到顶部
+      // Math.abs(position.y) > 1000 ? this.isShowBackTop = true : this.isShowBackTop = false
+      // console.log(position);
+      if(Math.abs(position.y) >= this.$refs.recommend.$el.offsetTop)
+      {
+        // console.log('到达推荐');
+        this.$refs.detailNavBar.currentTitleIndex = 3
+      }else if (Math.abs(position.y) >= this.$refs.comment.$el.offsetTop){
+        // console.log('到达评论');
+        this.$refs.detailNavBar.currentTitleIndex = 2
+      } else if (Math.abs(position.y) >= this.$refs.params.$el.offsetTop){
+        // console.log('到达参数');
+        this.$refs.detailNavBar.currentTitleIndex = 1
+      }else {
+        this.$refs.detailNavBar.currentTitleIndex = 0
+      }
+    },
+    //返回到顶部按钮
+    backClick() {
+      this.$refs.scroll.scrollTo(0,0)
+    },
+    //加入购物车
+    addToCart() {
+      //获取购物车需要展示的信息
+      const product = {}
+      product.image = this.topImages[0]
+      product.title = this.goods.title
+      product.desc = this.goods.desc
+      product.price = this.goods.realPrice
+      product.iid = this.iid
+
+      // 2.将商品添加到购物车
+      this.$store.dispatch('addCart',product).then(res => {
+        this.$toast.show(res)
+      })
+
+
     }
+
   },
   created() {
   //  1.保存传入的iid
@@ -88,14 +156,68 @@ name: "Detail",
         this.commentInfo = data.rate.list[0]
         // console.log(this.commentInfo);
       }
+      // 也不能保证图片完全加载成功
+      // this.$nextTick(() => {
+      //   this.themTopYs.push(0)
+      //   this.themTopYs.push(this.$refs.params.$el.offsetTop)
+      //   this.themTopYs.push(this.$refs.comment.$el.offsetTop)
+      //   this.themTopYs.push(this.$refs.recommend.$el.offsetTop)
+      //   console.log(this.themTopYs);
+      // })
 
     })
     //3.请求推荐数据
     getRecommend().then(res => {
       // console.log(res);
       this.recommendsInfo = res.data.list
-      console.log(this.recommendsInfo);
+      // console.log(this.recommendsInfo);
     })
+    // 对图片信息进行防抖操作，再在上面方法goodsInfoLoad()进行调用
+    this.getThemTopY = debunce(() => {
+      this.themTopYs = []
+      this.themTopYs.push(0)
+      this.themTopYs.push(this.$refs.params.$el.offsetTop)
+      this.themTopYs.push(this.$refs.comment.$el.offsetTop)
+      this.themTopYs.push(this.$refs.recommend.$el.offsetTop)
+      // console.log(this.themTopYs);
+    },100)
+  },
+  // 当从详情页退出时，不需要再监听图片是否加载成功了(因为Detail从keep-alive中排除了)
+  destroyed() {
+    // this.$bus.$off('itemImgLoad',this.itemImgListener)
+    // console.log("abd");
+  },
+  mounted() {
+    // this.itemImgListener = () => {
+    //   this.$refs.scroll.refresh()
+    //   //refresh()
+    // }
+    //解决商品上拉时卡顿bug
+    // 为什么没对refresh进行封装就会报错？
+
+    // const refresh = debunce(this.$refs.scroll.refresh,100)
+    // 对监听的函数进行保存
+    this.itemImgListener = () => {
+      // this.$refs.scroll.scroll.refresh()
+      // refresh()
+      // 也可以不用防抖函数，但是必须要加this.$refs.scroll &&进行判断
+      this.$refs.scroll && this.$refs.scroll.scroll.refresh()
+      // console.log("****");
+    }
+    this.$bus.$on('itemImageLoad',this.itemImgListener)
+
+    // 对监听的函数进行保存
+
+    // this.$bus.$on('itemImageLoad',this.itemImgListener)
+    // this.themTopYs.push(0)
+    //
+    //
+    //
+    // this.themTopYs.push(this.$refs.params.$el.offsetTop)
+    // this.themTopYs.push(this.$refs.comment.$el.offsetTop)
+    // this.themTopYs.push(this.$refs.recommend.$el.offsetTop)
+    // console.log(this.themTopYs);
+
   }
 }
 </script>
@@ -111,7 +233,7 @@ name: "Detail",
   overflow: hidden;
   position: absolute;
   top: 44px;
-  bottom: 0px;
+  bottom: 49px;
   left: 0;
   right: 0;
 }

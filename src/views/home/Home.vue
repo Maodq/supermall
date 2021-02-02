@@ -73,7 +73,8 @@ export default {
       isShowBackTop: false,
       tabOffsetTop:0,
       isFixTabcontrol: false,
-      saveY: 0
+      saveY: 0,
+      itemImgListener:null
 
     }
   },
@@ -99,20 +100,19 @@ export default {
   },
   deactivated() {
     this.saveY = this.$refs.scroll.scroll.y
+    this.$bus.$off('itemImgLoad',this.itemImgListener)
     // console.log("deactived");
   },
   mounted() {
     //解决商品上拉时卡顿hub
     // 为什么没对refresh进行封装就会报错？
     const refresh = debunce(this.$refs.scroll.refresh,100)
-    this.$bus.$on('itemImageLoad',() => {
+    // 对监听的函数进行保存
+    this.itemImgListener = () => {
       // this.$refs.scroll.scroll.refresh()
       refresh()
-    })
-
-    // setTimeout(() => {
-    //   console.log('zheshi',this.$refs.tabControl.$el.offsetTop);
-    // },1000)
+    }
+    this.$bus.$on('itemImageLoad',this.itemImgListener)
 
   },
 methods: {

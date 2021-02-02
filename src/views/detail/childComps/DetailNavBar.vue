@@ -4,7 +4,8 @@
       <img src="~assets/img/common/back.svg" alt="" >
     </div>
     <div slot="center" class="title">
-      <div class="titleItem" v-for="(item,index) in content" @click="titleItemClick(index)" :class="{active:currentTitleIndex === index}">{{item}}</div>
+      <div class="titleItem" v-for="(item,index) in content" @click="titleItemClick(index)" :class="{active:currentTitleIndex === index}">{{item}}
+      </div>
     </div>
   </nav-bar>
 </template>
@@ -30,6 +31,7 @@ methods:{
   },
   titleItemClick(index) {
     this.currentTitleIndex = index
+    this.$emit('titleClick',index)
   }
 
 },

@@ -30,7 +30,6 @@ export default {
 
 <style scoped>
 .detail-param-info{
-
   padding: 15px 15px;
   font-size: 14px;
   border-bottom: 5px solid #f2f5f8;
@@ -38,7 +37,7 @@ export default {
 .detail-param-info table {
   position: relative;
   width: 100%;
-  font-size: 4px;
+  /*font-size: 4px;*/
   border-collapse: collapse;
 }
 .detail-param-info table tr {
